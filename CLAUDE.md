@@ -13,11 +13,12 @@ Rust + Tauri 2 (system WebKitGTK) + CodeMirror 6, plain TypeScript, no UI framew
 
 ## Do not disturb the desktop
 
-The user works on this machine while sessions run. **Never launch the app window on their workspace or take screen grabs** unless they ask in that message. Use instead:
+The user works on this machine while sessions run. **Never open the app on their current workspace or grab their screen.** On 2026-11-15 they allowed test launches on **Hyprland workspace 9** (they work on 1); confirm that still holds before relying on it in a new session.
 
-- `scripts/preview-headless.sh out.png 'file=test.md&cursor=420&keys=Ctrl+P&type=font' 900x760` renders the built frontend in headless Chromium with a mocked backend (`tests/harness/mock.js`). Needs `npm run build` first. Hash options: `file` (test.md or a file in tests/harness/), `cursor`, `scroll`, `keys` (combos separated by `;`), `type`.
-- `ALLWRITE_SNAPSHOT=/path/out.png allwrite file.md` makes the real app write a PNG of its page after `ALLWRITE_SNAPSHOT_DELAY` ms (default 3000). The window still opens, so only use it when the user is fine with that.
-- Hyprland here uses the Lua config API (`hl.*`, `hyprctl eval`); old `hyprctl dispatch exec "[rules] cmd"` syntax does not work.
+- `scripts/run-ws9.sh [VAR=value ...] [-- file]` starts the release build on workspace 9 without switching to it (`hl.exec_cmd(cmd, { workspace = "9 silent" })`). Hyprland here uses the Lua API (`hyprctl eval`); the old `hyprctl dispatch exec "[rules] cmd"` syntax fails.
+- Dev hooks in the real app (cost nothing when unset): `ALLWRITE_SNAPSHOT=/path/out.png` writes a PNG of the page after `ALLWRITE_SNAPSHOT_DELAY` ms (default 3000); `ALLWRITE_EVAL='<js>'` runs JS in the page halfway through that delay. `window.allwrite` is the app state (`allwrite.view` is the CodeMirror view); synthetic `keydown` events on `window` trigger commands.
+- `scripts/preview-headless.sh out.png 'file=test.md&cursor=420&keys=Ctrl+P&type=font' 900x760` renders the built frontend in headless Chromium with a mocked backend (`tests/harness/mock.js`), no window at all. Needs `npm run build`. Hash options: `file` (test.md or a file in tests/harness/), `cursor`, `scroll`, `keys` (combos separated by `;`), `type`. Chromium is not WebKit: it did not catch the lazy-image bug below.
+- Always `pkill -x allwrite` when done and check `hyprctl activeworkspace` is still the user's.
 
 ## Commands
 
@@ -47,7 +48,8 @@ src/                 frontend
   editor/format.ts   bold, headings, lists...                   languages.ts  mode by file name, lazy language load
   ui/                topbar, statusbar, palette (also the generic picker), settings, overlay (modal/banner/toast), icons
 src-tauri/src/
-  main.rs            Tauri commands, watcher thread, WebKit memory tuning, snapshot dev hook
+  main.rs            Tauri commands, watcher thread, lean env + WebKit tuning, snapshot/eval dev hooks
+  gpu_guard.rs       keeps WebKit from waking a suspended GPU (exports __open_2, see build.rs)
   files.rs           read, atomic write, image import, recent files
   theme.rs           pywal -> portal -> built-in palette        config.rs  config.toml        fonts.rs  fc-list
 tests/               vitest; tests/harness/ is the headless preview mock
@@ -72,10 +74,29 @@ packaging/           .desktop + PKGBUILD
 - Top bar: one heading button (opens a picker); Save As, Replace and zoom are keys + palette only.
 - No hanging indent for wrapped list items yet; tables are shown raw in the code font.
 
+## Memory and startup (measured 2026-11-15, 1426x761 window at scale 2, test.md)
+
+| Configuration | Total PSS |
+|---|---|
+| Tauri defaults | ~300 MB |
+| Current build (lean env in `main.rs`) | **~170-180 MB** (allwrite ~50, WebKitWebProcess ~100, WebKitNetworkProcess ~20) |
+
+Cold start to titled window: ~330 ms. Idle CPU: 3 ticks in 20 s.
+
+**The sub-100 MB goal is not met and is not reachable on WebKitGTK**: what remains is WebKit/JSC code pages (~75 MB), two full-window software backing stores at scale 2 (~35-40 MB) and heaps. PLAN.md section 3 says to revisit the stack above 150 MB; that decision is the user's (the alternative it names is native GTK4, ~50 MB).
+
+What the lean setup does (`LEAN_ENV` + `gpu_guard.rs`; `ALLWRITE_GPU=1` turns all of it off):
+- Software rendering, no EGL: otherwise both processes load the NVIDIA + Mesa/LLVM driver stacks (~80 MB).
+- `JSC_useJIT=0` (~40 MB) and `Malloc=1` (~20 MB).
+- `gpu_guard.rs`: WebKit opens every `/dev/dri/card*` at page load; on this hybrid laptop that woke the sleeping NVIDIA GPU and blocked startup for ~2.2 s on every launch after the GPU had gone back to sleep. The binary exports its own `__open_2` that refuses DRM nodes whose device is runtime-suspended. If startup gets slow again, check `/sys/bus/pci/devices/0000:01:00.0/power/runtime_status` before and after a launch.
+- These variables are removed from the environment of `xdg-open` so browsers do not inherit them.
+
 ## Status
 
-Phases 1–5 of PLAN.md are implemented. Unit tests pass (Rust + vitest) and the frontend is verified in headless Chromium.
-**Not yet verified in the real WebKitGTK app:** total RAM (run `scripts/measure.sh`), startup time, pywal live switch, native dialogs, image paste and drag-drop. Update this section once they are.
+Phases 1-5 of PLAN.md are implemented. Verified in the real WebKitGTK app on 2026-11-15: rendering, local / absolute / remote images, external-change reload, save through IPC (atomic write, no false "changed on disk"), palette with key hints, font listing, recent files, startup time, idle CPU, RAM.
+**Not yet exercised in the real app:** native open/save dialogs, image paste and drag-drop, pywal live recolor (needs a wallpaper change), portal fallback, autosave, close-with-unsaved prompt.
+
+Known WebKitGTK quirks: `loading="lazy"` images never loaded, so image widgets load eagerly. The user's AT-SPI registry fails to start (harmless warnings on stderr).
 
 ## Git
 

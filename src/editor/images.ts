@@ -71,7 +71,8 @@ export class ImageWidget extends WidgetType {
     if (ref.kind === 'blocked') return fail('remote images are turned off'), wrap
 
     const img = document.createElement('img')
-    img.loading = 'lazy'
+    // No loading="lazy": WebKitGTK was seen never to start those loads. CodeMirror only
+    // creates widgets for the visible part of the document, which is lazy enough.
     img.decoding = 'async'
     img.alt = this.alt
     img.draggable = false

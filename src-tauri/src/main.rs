@@ -3,6 +3,7 @@
 mod config;
 mod files;
 mod fonts;
+mod gpu_guard;
 mod theme;
 
 use notify::{EventKind, RecursiveMode, Watcher};
@@ -180,9 +181,13 @@ fn open_url(url: String) -> Result<(), String> {
     if !ok {
         return Err("only http(s) and mailto links can be opened".into());
     }
-    std::process::Command::new("xdg-open")
-        .arg(&url)
-        .spawn()
+    let mut cmd = std::process::Command::new("xdg-open");
+    cmd.arg(&url);
+    // The browser must not inherit our memory-saving overrides.
+    for (k, _) in LEAN_ENV {
+        cmd.env_remove(k);
+    }
+    cmd.spawn()
         .map(|mut child| {
             // Reap in the background so no zombie is left behind.
             std::thread::spawn(move || {
@@ -279,8 +284,13 @@ fn snapshot_hook(app: &AppHandle) {
     let delay = std::env::var("ALLWRITE_SNAPSHOT_DELAY").ok().and_then(|s| s.parse().ok()).unwrap_or(3000u64);
     let app = app.clone();
     std::thread::spawn(move || {
-        std::thread::sleep(Duration::from_millis(delay));
+        // Optional `ALLWRITE_EVAL=<js>` runs in the page halfway through, to drive the UI in tests.
+        std::thread::sleep(Duration::from_millis(delay / 2));
         let Some(win) = app.get_webview_window("main") else { return };
+        if let Ok(js) = std::env::var("ALLWRITE_EVAL") {
+            let _ = win.eval(js);
+        }
+        std::thread::sleep(Duration::from_millis(delay - delay / 2));
         let _ = win.with_webview(move |wv| {
             use webkit2gtk::{SnapshotOptions, SnapshotRegion, WebViewExt};
             let out = PathBuf::from(&out);
@@ -303,7 +313,35 @@ fn snapshot_hook(app: &AppHandle) {
     });
 }
 
+/// Environment defaults that cut WebKitGTK's memory roughly in half (measured 2026-11-15:
+/// ~300 MB -> ~170-185 MB at a 1426x761 @2x window). Applied before GTK starts, only where the
+/// user has not set the variable. `ALLWRITE_GPU=1` skips all of them.
+const LEAN_ENV: &[(&str, &str)] = &[
+    // Software rendering: no GL compositor in the web process.
+    ("WEBKIT_DISABLE_COMPOSITING_MODE", "1"),
+    ("WEBKIT_DISABLE_DMABUF_RENDERER", "1"),
+    // Stop the UI process loading the GPU driver stack (NVIDIA + Mesa/LLVM, ~40 MB) just to probe EGL.
+    ("__EGL_VENDOR_LIBRARY_DIRS", "/nonexistent"),
+    // Interpreter only: no JIT code or compiler threads (~40 MB). Plenty fast for an editor.
+    ("JSC_useJIT", "0"),
+    // System malloc instead of bmalloc's per-process caches (~20 MB).
+    ("Malloc", "1"),
+];
+
+fn lean_env() {
+    if std::env::var_os("ALLWRITE_GPU").is_some() {
+        return;
+    }
+    for (k, v) in LEAN_ENV {
+        if std::env::var_os(k).is_none() {
+            std::env::set_var(k, v);
+        }
+    }
+    gpu_guard::enable();
+}
+
 fn main() {
+    lean_env();
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState {
