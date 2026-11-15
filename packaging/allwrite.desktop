@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=allwrite
+GenericName=Text Editor
+Comment=Minimal live-preview Markdown and text editor
+Exec=allwrite %f
+Icon=allwrite
+Terminal=false
+Categories=Utility;TextEditor;
+MimeType=text/markdown;text/plain;text/x-markdown;
+StartupWMClass=allwrite

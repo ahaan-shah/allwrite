@@ -1,0 +1,27 @@
+[package]
+name = "allwrite"
+version = "0.1.0"
+description = "Minimal live-preview Markdown and text editor"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["protocol-asset"] }
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+notify = { version = "8", default-features = false }
+toml = "0.8"
+dirs = "6"
+gtk = "0.18"
+webkit2gtk = "2.0"
+cairo-rs = { version = "0.18", features = ["png"] }
+
+[profile.release]
+lto = true
+opt-level = "s"
+codegen-units = 1
+strip = true
+panic = "abort"

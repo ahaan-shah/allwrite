@@ -1,0 +1,24 @@
+# Local build from this working tree: run `makepkg -si` inside packaging/.
+pkgname=allwrite
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Minimal live-preview Markdown and text editor"
+arch=('x86_64')
+license=('MIT')
+depends=('webkit2gtk-4.1' 'gtk3' 'fontconfig' 'xdg-utils')
+makedepends=('cargo' 'npm')
+optdepends=('python-pywal: live system palette' 'inter-font: default text font')
+options=('!lto')
+
+build() {
+  cd "$startdir/.."
+  npm ci
+  npx tauri build --no-bundle
+}
+
+package() {
+  cd "$startdir/.."
+  install -Dm755 src-tauri/target/release/allwrite "$pkgdir/usr/bin/allwrite"
+  install -Dm644 packaging/allwrite.desktop "$pkgdir/usr/share/applications/allwrite.desktop"
+  install -Dm644 logos/markdown-reader-blue.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/allwrite.svg"
+}

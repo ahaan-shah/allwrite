@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Markdown reader icon">
+<defs><linearGradient id="foldL" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#dfb898"/><stop offset="1" stop-color="#fff4e8"/></linearGradient><linearGradient id="foldR" x1="1" y1="0" x2="0" y2="1"><stop stop-color="#dfb898"/><stop offset="1" stop-color="#fff4e8"/></linearGradient></defs>
+<rect width="512" height="512" rx="116" fill="#151515"/>
+<path d="M84 130 Q84 104 111 112 Q188 144 256 215 Q324 144 401 112 Q428 104 428 130 L428 392 Q336 329 278 335 Q263 345 256 382 Q249 345 234 335 Q176 329 84 392 Z" fill="#fff3e7"/>
+<path d="M84 245 Q187 277 234 335 Q176 329 84 392 Z" fill="url(#foldL)"/>
+<path d="M428 245 Q325 277 278 335 Q336 329 428 392 Z" fill="url(#foldR)"/>
+<path d="M256 215 L256 382 Q249 345 234 335 Q187 277 84 245 L84 130 Q84 104 111 112 Q188 144 256 215" fill="#f8e9da" opacity=".35"/>
+</svg>
