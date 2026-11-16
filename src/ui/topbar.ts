@@ -8,8 +8,9 @@ import { icon } from './icons'
 // '|' is a separator; the 'fmt' group only shows for Markdown files.
 const LAYOUT: Array<{ group: string; ids: string[] }> = [
   { group: 'file', ids: ['new', 'open', 'save'] },
-  { group: 'fmt', ids: ['bold', 'italic', 'strike', 'code', 'heading', 'link', 'image', 'bullet', 'task', 'quote'] },
-  { group: 'view', ids: ['find', 'source', 'focus'] },
+  { group: 'fmt', ids: ['heading', 'bold', 'italic', 'strike', 'code', 'link'] },
+  { group: 'block', ids: ['bullet', 'ordered', 'task', 'quote', 'codeblock', 'table', 'image'] },
+  { group: 'view', ids: ['outline', 'find', 'source', 'focus'] },
   { group: 'app', ids: ['palette', 'settings'] },
 ]
 
@@ -37,6 +38,7 @@ export function initTopbar(): void {
       if (!cmd || !svg) continue
       const b = document.createElement('button')
       b.className = 'icon-btn'
+      b.dataset.cmd = id
       b.appendChild(svg)
       b.setAttribute('aria-label', cmd.label)
       // Keep focus (and the selection) in the editor.
@@ -58,6 +60,7 @@ export function initTopbar(): void {
   }
   const refresh = () => {
     name.textContent = app.doc.name
+    name.classList.toggle('untitled', !app.doc.path)
     name.title = app.doc.path || 'Not saved yet'
     dot.classList.toggle('on', app.doc.dirty)
     document.body.dataset.mode = app.doc.mode

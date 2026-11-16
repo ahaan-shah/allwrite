@@ -1,14 +1,14 @@
 // Only the icons we use are imported, so only those end up in the bundle.
 
 import {
-  Bold, Code, Command, Eye, FilePlus, FolderOpen, Heading, Image, Italic, Link, List, ListTodo,
-  Maximize, Save, Search, Settings, Strikethrough, TextQuote, createElement,
+  Bold, Code, Command, Eye, FilePlus, FolderOpen, Heading, Image, Italic, Link, List, ListOrdered, ListTodo,
+  Maximize, Save, Search, Settings, SquareCode, Strikethrough, Table, TableOfContents, TextQuote, createElement,
 } from 'lucide'
 
 const ICONS = {
   new: FilePlus, open: FolderOpen, save: Save, bold: Bold, italic: Italic, strike: Strikethrough,
   code: Code, heading: Heading, link: Link, image: Image, list: List, task: ListTodo,
-  quote: TextQuote, search: Search, source: Eye, focus: Maximize, palette: Command, settings: Settings,
+  quote: TextQuote, ordered: ListOrdered, codeblock: SquareCode, table: Table, outline: TableOfContents, search: Search, source: Eye, focus: Maximize, palette: Command, settings: Settings,
 } as const
 
 export type IconName = keyof typeof ICONS

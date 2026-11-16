@@ -110,30 +110,38 @@ export function insertImageMarkdown(view: EditorView, rel: string, pos?: number)
   view.dispatch({ changes: { from: at, to, insert: text }, selection: { anchor: at + text.length }, userEvent: 'input.paste' })
 }
 
-/** Paste handler: an image on the clipboard is saved to assets/ and linked. */
-export function imagePaste(onError: (msg: string) => void) {
-  return EditorView.domEventHandlers({
-    paste(event, view) {
-      const cd = event.clipboardData
-      if (!cd) return false
-      // Prefer text when the clipboard has both (e.g. copied from a web page).
-      if (cd.getData('text/plain')) return false
-      let file: File | null = null
-      for (const item of cd.items) {
-        if (item.kind === 'file' && EXT[item.type]) {
-          file = item.getAsFile()
-          if (file) break
-        }
+/** An image file on the clipboard or in a drop, if there is one. */
+export function imageFile(dt: DataTransfer): File | null {
+  for (const item of dt.items) {
+    if (item.kind === 'file' && EXT[item.type]) {
+      const f = item.getAsFile()
+      if (f) return f
+    }
+  }
+  for (const f of dt.files) if (EXT[f.type]) return f
+  return null
+}
+
+export function imageExt(type: string): string | undefined {
+  return EXT[type]
+}
+
+/** Local image paths in a text/uri-list or plain-text paste (a file copied in a file manager). */
+export function imagePaths(text: string): string[] {
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith('#'))
+  if (!lines.length) return []
+  const paths: string[] = []
+  for (const l of lines) {
+    let p = l
+    if (/^file:\/\//i.test(p)) {
+      try {
+        p = decodeURIComponent(p.replace(/^file:\/\/(localhost)?/i, ''))
+      } catch {
+        return []
       }
-      if (!file) return false
-      event.preventDefault()
-      const ext = EXT[file.type]
-      file
-        .arrayBuffer()
-        .then((buf) => invoke<string>('save_image', new Uint8Array(buf), { headers: { ext } }))
-        .then((rel) => insertImageMarkdown(view, rel))
-        .catch((e) => onError(String(e)))
-      return true
-    },
-  })
+    }
+    if (!p.startsWith('/') || !/\.(png|jpe?g|gif|webp|svg|bmp|avif)$/i.test(p)) return []
+    paths.push(p)
+  }
+  return paths
 }

@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod clipboard;
 mod config;
 mod files;
 mod fonts;
@@ -137,6 +138,23 @@ fn save_image(request: tauri::ipc::Request<'_>, state: State<AppState>) -> Resul
     };
     let ext = request.headers().get("ext").and_then(|v| v.to_str().ok()).unwrap_or("png");
     files::save_pasted_image(&doc_path(&state)?, bytes, ext)
+}
+
+/// Paste from the system clipboard: an image is saved to assets/, copied image files are imported.
+/// Returns the relative paths to link (empty when the clipboard holds no image).
+/// Async so the clipboard tools never block the GTK main thread.
+#[tauri::command]
+async fn paste_image(state: State<'_, AppState>) -> Result<Vec<String>, String> {
+    let doc = doc_path(&state)?;
+    match clipboard::read()? {
+        clipboard::Clip::Image { bytes, ext } => Ok(vec![files::save_pasted_image(&doc, &bytes, ext)?]),
+        clipboard::Clip::Files(paths) => paths
+            .iter()
+            .filter(|p| files::is_image(Path::new(p)))
+            .map(|p| files::import_image(&doc, Path::new(p)))
+            .collect(),
+        clipboard::Clip::Nothing => Ok(vec![]),
+    }
 }
 
 #[tauri::command]
@@ -377,6 +395,7 @@ fn main() {
             write_file,
             close_file,
             save_image,
+            paste_image,
             import_image,
             allow_image,
             get_theme,

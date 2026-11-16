@@ -44,7 +44,8 @@ src/                 frontend
   theme.ts           palette -> CSS variables, contrast check                fonts.ts   font slots -> CSS variables
   editor/setup.ts    CodeMirror extensions per mode (markdown | text | code), highlight style, chrome theme
   editor/livePreview.ts   the core: buildDecorations(state, visibleRanges) + ViewPlugin
-  editor/images.ts   image widget, path resolution, paste      widgets.ts  bullet / hr / checkbox
+  editor/images.ts   image widget, path resolution, paste helpers   widgets.ts  bullet / hr / checkbox / fence label
+  editor/tables.ts   GFM table widget
   editor/format.ts   bold, headings, lists...                   languages.ts  mode by file name, lazy language load
   ui/                topbar, statusbar, palette (also the generic picker), settings, overlay (modal/banner/toast), icons
 src-tauri/src/
@@ -52,6 +53,7 @@ src-tauri/src/
   gpu_guard.rs       keeps WebKit from waking a suspended GPU (exports __open_2, see build.rs)
   files.rs           read, atomic write, image import, recent files
   theme.rs           pywal -> portal -> built-in palette        config.rs  config.toml        fonts.rs  fc-list
+  clipboard.rs       system clipboard image via wl-paste / xclip
 tests/               vitest; tests/harness/ is the headless preview mock
 packaging/           .desktop + PKGBUILD
 ```
@@ -72,7 +74,9 @@ packaging/           .desktop + PKGBUILD
 - Portal fallback uses gio D-Bus from the `gtk` crate (already linked) instead of `zbus`, and is only set up when pywal's `colors.json` is absent.
 - Fonts come from `fc-list` rather than linking fontconfig.
 - Top bar: one heading button (opens a picker); Save As, Replace and zoom are keys + palette only.
-- No hanging indent for wrapped list items yet; tables are shown raw in the code font.
+- No hanging indent for wrapped list items yet. Tables render as an HTML table widget (`editor/tables.ts`, a StateField because block widgets cannot come from a ViewPlugin) and show raw when the cursor is inside.
+- Headings default to the text color (theme slot `heading = "foreground"`), drawn a step brighter as `--strong`; set `[theme] heading = "color6"` for the old teal.
+- Image paste: the page's clipboard data is used when WebKit exposes it; when a paste carries no text at all, the async `paste_image` command reads the system clipboard with `wl-paste` (xclip on X11). `Ctrl+Shift+V` forces that path. Pasting into an untitled document asks where to save it first.
 
 ## Memory and startup (measured 2026-11-15, 1426x761 window at scale 2, test.md)
 
@@ -94,7 +98,7 @@ What the lean setup does (`LEAN_ENV` + `gpu_guard.rs`; `ALLWRITE_GPU=1` turns al
 ## Status
 
 Phases 1-5 of PLAN.md are implemented. Verified in the real WebKitGTK app on 2026-11-15: rendering, local / absolute / remote images, external-change reload, save through IPC (atomic write, no false "changed on disk"), palette with key hints, font listing, recent files, startup time, idle CPU, RAM.
-**Not yet exercised in the real app:** native open/save dialogs, image paste and drag-drop, pywal live recolor (needs a wallpaper change), portal fallback, autosave, close-with-unsaved prompt.
+**Not yet exercised in the real app:** native open/save dialogs, image paste (incl. the wl-paste fallback, 2026-11-16) and drag-drop, table widget clicks, pywal live recolor (needs a wallpaper change), portal fallback, autosave, close-with-unsaved prompt.
 
 Known WebKitGTK quirks: `loading="lazy"` images never loaded, so image widgets load eagerly. The user's AT-SPI registry fails to start (harmless warnings on stderr).
 

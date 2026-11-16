@@ -1,21 +1,22 @@
 // CodeMirror configuration per file type.
 
+import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { HighlightStyle, bracketMatching, indentOnInput, syntaxHighlighting } from '@codemirror/language'
 import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search'
 import { Compartment, EditorState, type Extension } from '@codemirror/state'
-import { EditorView, drawSelection, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers, type ViewUpdate } from '@codemirror/view'
+import { EditorView, drawSelection, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers, placeholder, type ViewUpdate } from '@codemirror/view'
 import { tags as t } from '@lezer/highlight'
 import type { Mode } from '../types'
-import { imagePaste } from './images'
 import { languages, loadLanguage } from './languages'
 import { livePreview } from './livePreview'
+import { tables } from './tables'
 
 // Colors are CSS variables, so a palette change needs no editor reconfiguration.
 const highlight = HighlightStyle.define([
   { tag: t.heading, fontWeight: '700', color: 'var(--heading)' },
-  { tag: t.strong, fontWeight: '700' },
+  { tag: t.strong, fontWeight: '700', color: 'var(--strong)' },
   { tag: t.emphasis, fontStyle: 'italic' },
   { tag: t.strikethrough, textDecoration: 'line-through' },
   { tag: t.link, color: 'var(--accent)' },
@@ -55,6 +56,9 @@ const chrome = EditorView.theme({
   '.cm-panels.cm-panels-top': { borderBottom: '1px solid var(--border)' },
   '.cm-panels.cm-panels-bottom': { borderTop: '1px solid var(--border)' },
   '.cm-matchingBracket, .cm-nonmatchingBracket': { backgroundColor: 'var(--hover)', outline: 'none' },
+  '.cm-placeholder': { color: 'var(--muted)', fontStyle: 'italic' },
+  '.cm-tooltip': { backgroundColor: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--fg)' },
+  '.cm-gotoLine': { fontFamily: 'var(--font-text)' },
 })
 
 const modeC = new Compartment()
@@ -64,7 +68,8 @@ const readOnlyC = new Compartment()
 export interface EditorHooks {
   onUpdate: (u: ViewUpdate) => void
   openUrl: (url: string) => void
-  onError: (msg: string) => void
+  /** Return true when the paste was handled (images, links over a selection). */
+  onPaste: (e: ClipboardEvent, view: EditorView) => boolean
 }
 
 let hooks: EditorHooks
@@ -76,18 +81,20 @@ function modeExtensions(mode: Mode, live: boolean): Extension {
       markdown({ base: markdownLanguage, codeLanguages: languages }),
       EditorView.lineWrapping,
       EditorView.editorAttributes.of({ class: live ? 'mode-prose mode-live' : 'mode-prose mode-source' }),
-      live ? livePreview(hooks.openUrl) : [],
-      imagePaste(hooks.onError),
+      live ? [livePreview(hooks.openUrl), tables] : [],
+      placeholder('Start writing…'),
     ]
   }
   if (mode === 'text') {
-    return [EditorView.lineWrapping, EditorView.editorAttributes.of({ class: 'mode-prose mode-text' })]
+    return [EditorView.lineWrapping, EditorView.editorAttributes.of({ class: 'mode-prose mode-text' }), placeholder('Start writing…')]
   }
   return [
     lineNumbers(),
     highlightActiveLineGutter(),
     highlightActiveLine(),
     bracketMatching(),
+    closeBrackets(),
+    keymap.of(closeBracketsKeymap),
     indentOnInput(),
     EditorView.editorAttributes.of({ class: 'mode-code' }),
   ]
@@ -125,6 +132,8 @@ export function showDocument(view: EditorView, o: DocOptions): void {
         langC.of([]),
         readOnlyC.of(EditorState.readOnly.of(o.readonly)),
         EditorView.updateListener.of((u) => hooks.onUpdate(u)),
+        EditorView.domEventHandlers({ paste: (e, view) => hooks.onPaste(e, view) }),
+        EditorView.contentAttributes.of({ spellcheck: 'false', autocorrect: 'off', autocapitalize: 'off' }),
       ],
     }),
   )

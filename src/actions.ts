@@ -1,13 +1,14 @@
 // Every user action, registered once. See commands.ts.
 
-import { openSearchPanel } from '@codemirror/search'
+import { gotoLine, openSearchPanel } from '@codemirror/search'
+import { EditorView } from '@codemirror/view'
 import { invoke } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import { register, run } from './commands'
 import { ensureFonts, guard, newFile, openFile, reloadFromDisk, save, saveAs, toggleSource, updateConfig } from './doc'
-import { bulletLine, headingLine, insertLink, mapLines, quoteLine, taskLine, toggleInline } from './editor/format'
-import { insertImageMarkdown } from './editor/images'
+import { bulletLine, headingLine, insertCodeBlock, insertLink, insertRule, insertTable, mapLines, orderedList, quoteLine, taskLine, toggleInline } from './editor/format'
+import { imageExt, imageFile, imagePaths, insertImageMarkdown } from './editor/images'
 import { quickPicks } from './fonts'
 import { app } from './state'
 import { toast } from './ui/overlay'
@@ -28,8 +29,16 @@ export function openUrl(url: string): void {
   invoke('open_url', { url }).catch((e) => toast(String(e)))
 }
 
+/** Images live next to the document, so an untitled document is saved first. */
+async function ensureSaved(): Promise<boolean> {
+  if (app.doc.path) return true
+  if (app.doc.mode !== 'markdown') return false
+  toast('Choose where to save this document — images are stored next to it')
+  return saveAs()
+}
+
 export async function addImage(src: string, pos?: number): Promise<void> {
-  if (!app.doc.path) return toast('Save the document first, so the image has a folder to live in')
+  if (!(await ensureSaved())) return
   try {
     insertImageMarkdown(app.view, await invoke<string>('import_image', { src }), pos)
   } catch (e) {
@@ -37,8 +46,80 @@ export async function addImage(src: string, pos?: number): Promise<void> {
   }
 }
 
+/** Save an image's bytes (from a paste or drop) into assets/ and link it. */
+async function addImageBytes(file: File, pos?: number): Promise<void> {
+  const ext = imageExt(file.type)
+  if (!ext) return
+  const buf = await file.arrayBuffer() // read before any dialog: the clipboard data does not survive it
+  if (!(await ensureSaved())) return
+  try {
+    insertImageMarkdown(app.view, await invoke<string>('save_image', new Uint8Array(buf), { headers: { ext } }), pos)
+  } catch (e) {
+    toast(String(e))
+  }
+}
+
+/** Ask the backend to read the system clipboard (WebKitGTK does not always pass images to the page). */
+async function pasteImageFromSystem(quiet: boolean): Promise<boolean> {
+  if (!(await ensureSaved())) return false
+  try {
+    const rels = await invoke<string[]>('paste_image')
+    if (!rels.length) {
+      if (!quiet) toast('No image on the clipboard')
+      return false
+    }
+    for (const rel of rels) insertImageMarkdown(app.view, rel)
+    return true
+  } catch (e) {
+    toast(String(e))
+    return false
+  }
+}
+
+const URL_RE = /^(https?:\/\/|mailto:|www\.)\S+$/i
+
+/** Editor paste handler: images, copied image files, and URLs pasted over a selection. */
+export function onPaste(e: ClipboardEvent, view: EditorView): boolean {
+  if (app.doc.mode !== 'markdown' || app.doc.readonly) return false
+  const cd = e.clipboardData
+  const text = cd?.getData('text/plain') ?? ''
+  const uris = cd?.getData('text/uri-list') ?? ''
+  const file = cd ? imageFile(cd) : null
+  // An image wins unless real text came with it (a browser "Copy image" also puts its URL in text).
+  if (file && (!text.trim() || URL_RE.test(text.trim()) || imagePaths(text).length)) {
+    e.preventDefault()
+    void addImageBytes(file)
+    return true
+  }
+  const paths = imagePaths(uris || text)
+  if (paths.length) {
+    e.preventDefault()
+    void (async () => {
+      for (const p of paths) await addImage(p)
+    })()
+    return true
+  }
+  const sel = view.state.selection.main
+  const url = text.trim()
+  if (!sel.empty && URL_RE.test(url) && !view.state.sliceDoc(sel.from, sel.to).includes('\n')) {
+    // Pasting a link over selected words makes them a link.
+    e.preventDefault()
+    const label = view.state.sliceDoc(sel.from, sel.to)
+    const insert = `[${label}](${url.startsWith('www.') ? 'https://' + url : url})`
+    view.dispatch({ changes: { from: sel.from, to: sel.to, insert }, selection: { anchor: sel.from + insert.length }, userEvent: 'input.paste' })
+    return true
+  }
+  if (!text && !uris) {
+    // Nothing the page can see: probably an image WebKit did not expose. Ask the system.
+    e.preventDefault()
+    void pasteImageFromSystem(true)
+    return true
+  }
+  return false
+}
+
 async function pickImage(): Promise<void> {
-  if (!app.doc.path) return toast('Save the document first, so the image has a folder to live in')
+  if (!(await ensureSaved())) return
   const picked = await openDialog({ multiple: false, defaultPath: app.doc.dir, filters: [{ name: 'Images', extensions: IMAGE_EXTS }] })
   if (typeof picked === 'string') await addImage(picked)
   app.view.focus()
@@ -76,6 +157,37 @@ async function showPalette(): Promise<void> {
   openPalette(extra)
 }
 
+/** Jump to a heading: a picker over every ATX / setext heading in the document. */
+function outline(): void {
+  const doc = app.view.state.doc
+  const items: Item[] = []
+  let fence = false
+  for (let n = 1; n <= doc.lines; n++) {
+    const text = doc.line(n).text
+    if (/^\s{0,3}(```|~~~)/.test(text)) fence = !fence
+    if (fence) continue
+    const m = /^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/.exec(text)
+    let level = 0, title = ''
+    if (m) (level = m[1].length), (title = m[2])
+    else if (n > 1 && /^\s{0,3}(=+|-+)\s*$/.test(text) && doc.line(n - 1).text.trim() && !/^\s{0,3}([-*+]\s|#|>)/.test(doc.line(n - 1).text)) {
+      level = text.includes('=') ? 1 : 2
+      title = doc.line(n - 1).text.trim()
+    }
+    if (!level) continue
+    const line = m ? n : n - 1
+    items.push({
+      label: '\u2003'.repeat(level - 1) + (title || '(empty heading)'),
+      hint: 'H' + level,
+      run: () => {
+        const pos = doc.line(line).from
+        app.view.dispatch({ selection: { anchor: doc.line(line).to }, effects: EditorView.scrollIntoView(pos, { y: 'start', yMargin: 40 }) })
+      },
+    })
+  }
+  if (!items.length) return toast('No headings in this document')
+  openPicker(items, 'Go to heading…', { limit: 500 })
+}
+
 function zoom(delta: number): void {
   updateConfig((c) => (c.font.size = delta === 0 ? 16 : Math.max(9, Math.min(40, c.font.size + delta))))
 }
@@ -107,6 +219,13 @@ export function registerActions(): void {
         ),
       ),
     },
+    { id: 'ordered', label: 'Numbered list', keys: 'Ctrl+Shift+7', icon: 'ordered', run: md(() => orderedList(v())) },
+    { id: 'codeblock', label: 'Code block', keys: 'Ctrl+Alt+C', icon: 'codeblock', run: md(() => insertCodeBlock(v())) },
+    { id: 'table', label: 'Insert table', icon: 'table', run: md(() => insertTable(v())) },
+    { id: 'rule', label: 'Horizontal rule', run: md(() => insertRule(v())) },
+    { id: 'paste-image', label: 'Paste image from clipboard', keys: 'Ctrl+Shift+V', run: md(() => void pasteImageFromSystem(false)) },
+    { id: 'outline', label: 'Go to heading…', keys: 'Ctrl+Shift+O', icon: 'outline', run: md(outline) },
+    { id: 'goto-line', label: 'Go to line…', keys: 'Ctrl+Alt+G', run: () => gotoLine(v()) },
     { id: 'link', label: 'Insert link', keys: 'Ctrl+K', icon: 'link', run: md(() => insertLink(v())) },
     { id: 'image', label: 'Insert image…', keys: 'Ctrl+Shift+I', icon: 'image', run: md(() => void pickImage()) },
     { id: 'bullet', label: 'Bullet list', keys: 'Ctrl+Shift+8', icon: 'list', run: md(() => mapLines(v(), bulletLine)) },

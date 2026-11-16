@@ -70,6 +70,7 @@ function stepper(value: number, min: number, max: number, set: (v: number) => vo
 function toggle(value: boolean, set: (v: boolean) => void): HTMLElement {
   const input = document.createElement('input')
   input.type = 'checkbox'
+  input.className = 'switch'
   input.checked = value
   input.onchange = () => set(input.checked)
   return input

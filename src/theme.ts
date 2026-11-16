@@ -51,17 +51,22 @@ export function computeVars(t: Theme): Record<string, string> {
   const bg = t.bg
   const fg = ensureContrast(t.fg, bg, 7)
   const accent = ensureContrast(t.accent, bg, 4.5)
+  const dark = luminance(bg) < 0.5
+  // Headings and bold text sit a step brighter (darker on light themes) than body text.
+  const strong = mix(fg, dark ? '#ffffff' : '#000000', 0.35)
   const vars: Record<string, string> = {
     '--bg': bg,
     '--fg': fg,
     '--cursor': ensureContrast(t.cursor, bg, 3),
     '--muted': ensureContrast(t.muted, bg, 3.2),
     '--accent': accent,
-    '--heading': ensureContrast(t.heading, bg, 4.5),
+    '--heading': t.heading.toLowerCase() === t.fg.toLowerCase() ? strong : ensureContrast(t.heading, bg, 4.5),
+    '--strong': strong,
     '--code-bg': mix(bg, fg, 0.06),
     '--hover': mix(bg, fg, 0.1),
     '--border': mix(bg, fg, 0.14),
     '--panel': mix(bg, fg, 0.035),
+    '--shadow': dark ? 'rgb(0 0 0 / 0.45)' : 'rgb(0 0 0 / 0.14)',
     '--selection': mix(bg, accent, 0.32),
   }
   for (let i = 1; i <= 6; i++) vars[`--c${i}`] = ensureContrast(t.colors[i] ?? fg, bg, 4.5)

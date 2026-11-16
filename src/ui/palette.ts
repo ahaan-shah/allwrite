@@ -39,7 +39,7 @@ export function filterItems<T extends { label: string }>(items: T[], query: stri
     .map((x) => x.item)
 }
 
-export function openPicker(items: Item[], placeholder: string): void {
+export function openPicker(items: Item[], placeholder: string, opts: { limit?: number } = {}): void {
   const box = document.createElement('div')
   box.className = 'palette'
   const input = document.createElement('input')
@@ -67,7 +67,7 @@ export function openPicker(items: Item[], placeholder: string): void {
     el?.scrollIntoView({ block: 'nearest' })
   }
   const render = () => {
-    shown = filterItems(items, input.value)
+    shown = filterItems(items, input.value, opts.limit)
     list.replaceChildren(
       ...shown.map((item, i) => {
         const row = document.createElement('div')

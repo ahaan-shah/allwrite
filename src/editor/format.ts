@@ -103,3 +103,58 @@ export function insertLink(view: EditorView): void {
   )
   view.focus()
 }
+
+export function orderedLine(text: string, index: number): string {
+  if (/^\s*\d+[.)]\s+/.test(text)) return text.replace(/^(\s*)\d+[.)]\s+/, '$1')
+  return text.replace(LIST_PREFIX, `$1${index}. `)
+}
+
+/** Number every non-blank selected line 1, 2, 3… (or remove the numbers again). */
+export function orderedList(view: EditorView): void {
+  let i = 0
+  mapLines(view, (t) => orderedLine(t, ++i))
+}
+
+/**
+ * Insert a block on its own lines at the cursor, with a blank line before and after when needed.
+ * `cursorAt` is the offset inside `block` where the cursor goes (default: end).
+ */
+export function insertBlock(view: EditorView, block: string, cursorAt = block.length): void {
+  const { state } = view
+  const r = state.selection.main
+  const startLine = state.doc.lineAt(r.from)
+  const endLine = state.doc.lineAt(r.to)
+  // Replace a blank line in place; otherwise go after the current line.
+  const blank = r.empty && !startLine.text.trim()
+  const from = blank ? startLine.from : endLine.to
+  const to = blank ? startLine.to : endLine.to
+  const prev = blank ? (startLine.number > 1 ? state.doc.line(startLine.number - 1).text : '') : endLine.text
+  const next = endLine.number < state.doc.lines ? state.doc.line(endLine.number + 1).text : ''
+  const before = blank ? (prev.trim() ? '\n' : '') : prev.trim() ? '\n\n' : '\n'
+  const after = next.trim() ? '\n' : ''
+  const insert = before + block + after
+  view.dispatch({ changes: { from, to, insert }, selection: { anchor: from + before.length + cursorAt }, scrollIntoView: true, userEvent: 'input' })
+  view.focus()
+}
+
+export function insertCodeBlock(view: EditorView): void {
+  const { state } = view
+  const r = state.selection.main
+  if (!r.empty) {
+    // Wrap the selected lines in a fence.
+    const a = state.doc.lineAt(r.from), b = state.doc.lineAt(r.to)
+    const insert = '```\n' + state.sliceDoc(a.from, b.to) + '\n```'
+    view.dispatch({ changes: { from: a.from, to: b.to, insert }, selection: { anchor: a.from + 3 }, userEvent: 'input' })
+    view.focus()
+    return
+  }
+  insertBlock(view, '```\n\n```', 3)
+}
+
+export function insertTable(view: EditorView): void {
+  insertBlock(view, '| Column | Column |\n| ------ | ------ |\n|        |        |', 2)
+}
+
+export function insertRule(view: EditorView): void {
+  insertBlock(view, '---\n')
+}

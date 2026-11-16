@@ -82,7 +82,8 @@ impl Raw {
             cursor: slot("cursor", "cursor"),
             muted: slot("muted", "color8"),
             accent: slot("accent", "color4"),
-            heading: slot("heading", "color6"),
+            // Headings use the text color by default; the old teal read as "blue text".
+            heading: slot("heading", "foreground"),
             bg,
             colors: self.colors,
         }
@@ -246,7 +247,7 @@ mod tests {
         assert_eq!(t.cursor, "#ffcc00");
         assert_eq!(t.muted, "#080808");
         assert_eq!(t.accent, "#040404");
-        assert_eq!(t.heading, "#060606");
+        assert_eq!(t.heading, t.fg);
         assert_eq!(t.colors.len(), 16);
     }
 

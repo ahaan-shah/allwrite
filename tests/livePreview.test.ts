@@ -106,7 +106,9 @@ describe('live preview decorations', () => {
       'cm-codeblock',
       'cm-codeblock cm-codeblock-last',
     ])
-    expect(d.some((x) => x.kind === 'hide')).toBe(false)
+    // only the closing fence hides; the opening one becomes a language label
+    expect(d.filter((x) => x.kind === 'hide').map((x) => x.text)).toEqual(['```'])
+    expect(d.filter((x) => x.kind === 'fence')).toHaveLength(1)
   })
 
   it('shows images, hiding the syntax unless the cursor is on it', () => {

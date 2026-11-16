@@ -4,7 +4,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { addImage, openUrl, registerActions } from './actions'
+import { addImage, onPaste, openUrl, registerActions } from './actions'
 import { all, run } from './commands'
 import { guard, onEditorUpdate, onFileChanged, openFile, showFile } from './doc'
 import { createEditor } from './editor/setup'
@@ -36,7 +36,7 @@ async function main(): Promise<void> {
   app.view = createEditor(document.getElementById('editor')!, {
     onUpdate: onEditorUpdate,
     openUrl,
-    onError: toast,
+    onPaste,
   })
   ;(window as unknown as { allwrite: typeof app }).allwrite = app // handle for debugging and the test harness
   initOverlay()

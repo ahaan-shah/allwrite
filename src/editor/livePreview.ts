@@ -6,10 +6,11 @@ import type { EditorState, Range } from '@codemirror/state'
 import { Decoration, type DecorationSet, type EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view'
 import type { SyntaxNode } from '@lezer/common'
 import { ImageWidget, imageCtx } from './images'
-import { BulletWidget, CheckboxWidget, HrWidget } from './widgets'
+import { BulletWidget, CheckboxWidget, FenceWidget, HrWidget } from './widgets'
 
 const hideDeco = Decoration.replace({ kind: 'hide' })
-const bulletDeco = Decoration.replace({ widget: new BulletWidget(), kind: 'bullet' })
+const bulletDecos = [0, 1, 2].map((level) => Decoration.replace({ widget: new BulletWidget(level), kind: 'bullet' }))
+const escaped = Decoration.mark({ class: 'cm-escaped', kind: 'escaped' })
 const hrDeco = Decoration.replace({ widget: new HrWidget(), kind: 'hr' })
 const inlineCode = Decoration.mark({ class: 'cm-inline-code', kind: 'code' })
 const listNum = Decoration.mark({ class: 'cm-list-num', kind: 'num' })
@@ -135,7 +136,9 @@ export function buildDecorations(state: EditorState, visible: readonly Span[]): 
             if (task && doc.lineAt(task.from).number === doc.lineAt(ref.from).number) {
               hide(ref.from, task.from) // the checkbox stands in for the bullet
             } else if (ref.to > ref.from) {
-              out.push(bulletDeco.range(ref.from, ref.to))
+              let depth = 0
+              for (let p = list?.parent; p; p = p.parent) if (p.name === 'BulletList' || p.name === 'OrderedList') depth++
+              out.push(bulletDecos[depth % 3].range(ref.from, ref.to))
             }
             return
           }
@@ -160,14 +163,30 @@ export function buildDecorations(state: EditorState, visible: readonly Span[]): 
             if (!lineActive(ref.from) && ref.to > ref.from) out.push(hrDeco.range(ref.from, ref.to))
             return
 
-          case 'FencedCode':
+          case 'FencedCode': {
+            blockLines(ref, 'cm-codeblock', true)
+            if (!touches(ref.from, ref.to)) {
+              // Away from the cursor the fences give way to a small language label.
+              const first = doc.lineAt(ref.from)
+              const last = doc.lineAt(ref.to)
+              const info = node.getChild('CodeInfo')
+              const lang = info ? doc.sliceString(info.from, info.to) : ''
+              if (first.to > first.from) {
+                out.push(Decoration.replace({ widget: new FenceWidget(lang), kind: 'fence' }).range(first.from, first.to))
+              }
+              if (last.number > first.number && /^\s*(`{3,}|~{3,})\s*$/.test(last.text)) hide(last.from, last.to)
+            }
+            return false
+          }
+
           case 'CodeBlock':
             blockLines(ref, 'cm-codeblock', true)
             return false
 
           case 'Table':
+            // Rendered as a widget by tables.ts when the cursor is elsewhere.
             blockLines(ref, 'cm-table', false)
-            return
+            return false
 
           case 'Emphasis':
           case 'StrongEmphasis':
@@ -186,7 +205,10 @@ export function buildDecorations(state: EditorState, visible: readonly Span[]): 
           }
 
           case 'Escape':
-            if (!touches(ref.from, ref.to)) hide(ref.from, ref.from + 1)
+            if (!touches(ref.from, ref.to)) {
+              hide(ref.from, ref.from + 1)
+              if (ref.to > ref.from + 1) out.push(escaped.range(ref.from + 1, ref.to))
+            }
             return
 
           case 'Link': {

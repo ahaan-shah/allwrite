@@ -2,15 +2,40 @@
 
 import { EditorView, WidgetType } from '@codemirror/view'
 
+const BULLETS = ['•', '◦', '▪']
+
+/** A list bullet; nested lists cycle through three glyphs. */
 export class BulletWidget extends WidgetType {
-  eq(): boolean {
-    return true
+  constructor(readonly level: number) {
+    super()
+  }
+  eq(other: BulletWidget): boolean {
+    return other.level === this.level
   }
   toDOM(): HTMLElement {
     const s = document.createElement('span')
     s.className = 'cm-bullet'
-    s.textContent = '•'
+    s.textContent = BULLETS[this.level % BULLETS.length]
     return s
+  }
+}
+
+/** Stands in for an opening code fence: just the language name, small and dim. */
+export class FenceWidget extends WidgetType {
+  constructor(readonly lang: string) {
+    super()
+  }
+  eq(other: FenceWidget): boolean {
+    return other.lang === this.lang
+  }
+  toDOM(): HTMLElement {
+    const s = document.createElement('span')
+    s.className = 'cm-fence-label'
+    s.textContent = this.lang
+    return s
+  }
+  ignoreEvent(): boolean {
+    return false
   }
 }
 
@@ -33,10 +58,10 @@ export class CheckboxWidget extends WidgetType {
     return other.checked === this.checked
   }
   toDOM(view: EditorView): HTMLElement {
-    const box = document.createElement('input')
-    box.type = 'checkbox'
-    box.className = 'cm-checkbox'
-    box.checked = this.checked
+    const box = document.createElement('span')
+    box.className = this.checked ? 'cm-checkbox checked' : 'cm-checkbox'
+    box.setAttribute('role', 'checkbox')
+    box.setAttribute('aria-checked', String(this.checked))
     box.addEventListener('mousedown', (e) => {
       e.preventDefault()
       const pos = view.posAtDOM(box)
