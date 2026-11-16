@@ -47,7 +47,7 @@ src/                 frontend
   editor/images.ts   image widget, path resolution, paste helpers   widgets.ts  bullet / hr / checkbox / fence label
   editor/tables.ts   GFM table widget
   editor/format.ts   bold, headings, lists...                   languages.ts  mode by file name, lazy language load
-  ui/                topbar, statusbar, palette (also the generic picker), settings, overlay (modal/banner/toast), icons
+  ui/                topbar, statusbar, palette (also the generic picker), settings, shortcuts, overlay (modal/banner/toast), icons
 src-tauri/src/
   main.rs            Tauri commands, watcher thread, lean env + WebKit tuning, snapshot/eval dev hooks
   gpu_guard.rs       keeps WebKit from waking a suspended GPU (exports __open_2, see build.rs)
@@ -75,6 +75,7 @@ packaging/           .desktop + PKGBUILD
 - Fonts come from `fc-list` rather than linking fontconfig.
 - Top bar: undo/redo buttons left of the filename; one heading button (opens a picker); Save As, Replace and zoom are keys + palette only. Tooltips are our own `#tooltip` element (from `data-tip`), not native `title`, so they follow the theme.
 - Line numbers: setting `[app] line_numbers` (Settings, `Ctrl+Alt+L`) for Markdown / text, beside the centered column; code files always have them. Heading rows get `gl-hN` gutter classes so numbers line up with big headings. `#editor` has `isolation: isolate` because CodeMirror's gutter z-index would cover overlays.
+- Keyboard shortcut cheat sheet: `Ctrl+/` (`ui/shortcuts.ts`), built from the registry plus a short list of CodeMirror's own keys. Not `Ctrl+K`, which is Insert link. Note `Ctrl+/` replaces CodeMirror's toggle-comment in code files.
 - No "Start writing…" placeholder in empty documents (removed at the user's request).
 - No hanging indent for wrapped list items yet. Tables render as an HTML table widget (`editor/tables.ts`, a StateField because block widgets cannot come from a ViewPlugin) and show raw when the cursor is inside.
 - Headings default to the text color (theme slot `heading = "foreground"`), drawn a step brighter as `--strong`; set `[theme] heading = "color6"` for the old teal.

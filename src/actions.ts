@@ -15,6 +15,7 @@ import { app } from './state'
 import { toast } from './ui/overlay'
 import { type Item, openPalette, openPicker } from './ui/palette'
 import { openSettings } from './ui/settings'
+import { openShortcuts } from './ui/shortcuts'
 
 const IMAGE_EXTS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'avif']
 
@@ -273,6 +274,7 @@ export function registerActions(): void {
         toast(app.doc.mode === 'code' ? 'Code files always show line numbers' : `Line numbers ${app.config.app.line_numbers ? 'on' : 'off'}`)
       },
     },
+    { id: 'shortcuts', label: 'Keyboard shortcuts', keys: 'Ctrl+/', run: openShortcuts },
     { id: 'quit', label: 'Quit', keys: 'Ctrl+Q', run: async () => { if (await guard()) await getCurrentWindow().destroy() } },
   )
 }

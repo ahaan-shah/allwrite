@@ -192,7 +192,7 @@ body.focus-mode #topbar, body.focus-mode #statusbar { display: none; }
 @keyframes pop-in { from { opacity: 0; transform: translateY(-6px) scale(0.985); } }
 #overlay[hidden] { display: none; }
 
-.palette, .settings, .dialog {
+.palette, .settings, .dialog, .shortcuts {
   width: min(540px, calc(100vw - 32px));
   background: var(--panel);
   border: 1px solid var(--border);
@@ -270,6 +270,20 @@ input[type="range"] { accent-color: var(--accent); }
 .switch:checked::after { transform: translateX(14px); background: var(--bg); }
 .switch:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent); outline-offset: 2px; }
 input[type="range"] { width: 150px; }
+/* Keyboard shortcut cheat sheet */
+.shortcuts { width: min(760px, calc(100vw - 32px)); max-height: 76vh; overflow-y: auto; padding: 16px 20px; font-size: 13px; outline: none; }
+.shortcuts h2 { margin: 0 0 14px; font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+.shortcuts-grid { display: flex; flex-wrap: wrap; gap: 0 32px; }
+.shortcuts-col { flex: 1 1 300px; min-width: 0; }
+.shortcuts section { margin-bottom: 16px; }
+.shortcuts h3 { margin: 0 0 4px; font-size: 11.5px; font-weight: 600; color: var(--accent); letter-spacing: 0.03em; }
+.shortcut { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 26px; border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent); }
+.shortcut:last-child { border-bottom: none; }
+.shortcut > span:first-child { color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.keys { display: flex; align-items: center; gap: 3px; flex: none; }
+.keys kbd { min-width: 20px; text-align: center; color: var(--fg); font: 11px var(--font-code); padding: 1px 6px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px; background: var(--bg); }
+.keys-or { color: var(--muted); padding: 0 3px; }
+.shortcuts .settings-note { margin-top: 4px; }
 .settings-note { margin: 12px 0 0; color: var(--muted); font-size: 11.5px; }
 
 /* ---- editor ---- */

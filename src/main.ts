@@ -56,7 +56,7 @@ async function main(): Promise<void> {
       if (!id) return
       if (overlayOpen()) {
         // While a panel is open, its own toggle key closes it; other bindings wait.
-        if (id === 'palette' || id === 'settings') {
+        if (id === 'palette' || id === 'settings' || id === 'shortcuts') {
           e.preventDefault()
           closeOverlay()
         }
