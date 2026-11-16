@@ -56,6 +56,9 @@ src-tauri/src/
   clipboard.rs       system clipboard image via wl-paste / xclip
 tests/               vitest; tests/harness/ is the headless preview mock
 packaging/           .desktop + PKGBUILD
+install.sh           release installer (curl | sh); scripts/install.sh installs a local build
+.github/workflows/   ci.yml (tests), release.yml (tag -> GitHub release)
+docs/screenshots/    README images
 ```
 
 ## Things that are easy to get wrong
@@ -105,6 +108,11 @@ Phases 1-5 of PLAN.md are implemented. Verified in the real WebKitGTK app on 202
 
 Known WebKitGTK quirks: `loading="lazy"` images never loaded, so image widgets load eagerly. The user's AT-SPI registry fails to start (harmless warnings on stderr).
 
-## Git
+## Git and releases
 
-Local repository only, branch `main`. Commit after each working change.
+Public repository `ahaan-shah/allwrite` on GitHub, branch `main`. Commit after each working change. Never commit secrets (see `.gitignore`).
+
+Releasing: bump the version in `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json` and `packaging/PKGBUILD`, commit, then push a tag `vX.Y.Z`.
+`.github/workflows/release.yml` builds on Ubuntu 24.04 (x86-64 and ARM64, glibc 2.39 baseline) and publishes `allwrite-vX.Y.Z-<arch>-linux.tar.gz`, `.deb`, `.rpm` and `checksums.txt`.
+The root `install.sh` (the README's one-liner) downloads that tarball. `npx tauri build` without `--no-bundle` also makes the `.deb` / `.rpm` locally.
+README screenshots in `docs/screenshots/` come from `scripts/preview-headless.sh` with `tests/harness/readme.md`.

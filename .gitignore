@@ -1,5 +1,45 @@
+# Build output
 node_modules/
 dist/
 src-tauri/target/
 src-tauri/gen/
+*.deb
+*.rpm
+*.AppImage
+*.tar.gz
+*.pkg.tar.zst
+packaging/pkg/
+packaging/src/
+
+# Secrets and credentials: never commit these
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.jks
+*.crt
+*.cer
+id_rsa*
+id_ed25519*
+credentials*
+secrets*
+*.secret
+.npmrc
+.netrc
+# Tauri updater signing keys
+*.key.pub
+.tauri/
+
+# Editors, OS and tools
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+.claude/
 *.log
+*.png.tmp

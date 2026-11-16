@@ -22,11 +22,45 @@
     ],
     "security": {
       "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost https: http: data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src ipc: http://ipc.localhost",
-      "assetProtocol": { "enable": true, "scope": [] }
+      "assetProtocol": {
+        "enable": true,
+        "scope": []
+      }
     }
   },
   "bundle": {
-    "active": false,
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.png"]
+    "active": true,
+    "targets": [
+      "deb",
+      "rpm"
+    ],
+    "category": "Productivity",
+    "shortDescription": "Minimal live-preview Markdown and text editor",
+    "longDescription": "Write in rendered Markdown: syntax shows only where your cursor is, and the file on disk stays plain text. Follows your pywal palette live.",
+    "license": "MIT",
+    "homepage": "https://github.com/ahaan-shah/allwrite",
+    "publisher": "Ahaan Shah",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.png"
+    ],
+    "linux": {
+      "deb": {
+        "depends": [
+          "fontconfig",
+          "xdg-utils"
+        ],
+        "desktopTemplate": "../packaging/allwrite.desktop"
+      },
+      "rpm": {
+        "depends": [
+          "fontconfig",
+          "xdg-utils"
+        ],
+        "desktopTemplate": "../packaging/allwrite.desktop"
+      }
+    }
   }
 }
