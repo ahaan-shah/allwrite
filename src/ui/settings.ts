@@ -1,4 +1,4 @@
-// Settings panel (Ctrl+,): fonts, size, spacing, and the two app toggles.
+// Settings panel (Ctrl+,): fonts, size, spacing, and the app toggles.
 
 import { pickFont } from '../actions'
 import { updateConfig } from '../doc'
@@ -89,6 +89,7 @@ export function openSettings(): void {
     row('Size', stepper(f.size, 9, 40, (v) => updateConfig((c) => (c.font.size = v)))),
     row('Line height', slider(1.2, 2.2, 0.05, f.line_height, (v) => v.toFixed(2), (v) => updateConfig((c) => (c.font.line_height = Math.round(v * 100) / 100)))),
     row('Column width', slider(40, 140, 2, f.column_width, (v) => `${v} ch`, (v) => updateConfig((c) => (c.font.column_width = v)))),
+    row('Line numbers', toggle(app.config.app.line_numbers, (v) => updateConfig((c) => (c.app.line_numbers = v)))),
     row('Autosave', toggle(app.config.app.autosave, (v) => updateConfig((c) => (c.app.autosave = v)))),
     row('Remote images', toggle(app.config.app.remote_images, (v) => updateConfig((c) => (c.app.remote_images = v)))),
   )

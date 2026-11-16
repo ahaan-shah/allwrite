@@ -31,11 +31,13 @@ impl Default for FontCfg {
 pub struct AppCfg {
     pub autosave: bool,
     pub remote_images: bool,
+    /// Line numbers in Markdown and text files (code files always show them).
+    pub line_numbers: bool,
 }
 
 impl Default for AppCfg {
     fn default() -> Self {
-        Self { autosave: false, remote_images: true }
+        Self { autosave: false, remote_images: true, line_numbers: false }
     }
 }
 
@@ -81,6 +83,7 @@ mod tests {
         assert_eq!(c, Config::default());
         assert_eq!(c.font.column_width, 72);
         assert!(c.app.remote_images);
+        assert!(!c.app.line_numbers);
     }
 
     #[test]
@@ -103,6 +106,7 @@ mod tests {
         let mut c = Config::default();
         c.font.text = "Noto Serif".into();
         c.app.autosave = true;
+        c.app.line_numbers = true;
         let text = toml::to_string_pretty(&c).unwrap();
         assert_eq!(parse(&text), c);
     }

@@ -3,10 +3,10 @@
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
-import { HighlightStyle, bracketMatching, indentOnInput, syntaxHighlighting } from '@codemirror/language'
+import { HighlightStyle, bracketMatching, indentOnInput, syntaxHighlighting, syntaxTree } from '@codemirror/language'
 import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search'
-import { Compartment, EditorState, type Extension } from '@codemirror/state'
-import { EditorView, drawSelection, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers, type ViewUpdate } from '@codemirror/view'
+import { Compartment, EditorState, type Extension, RangeSet, StateField } from '@codemirror/state'
+import { EditorView, GutterMarker, drawSelection, gutterLineClass, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers, type ViewUpdate } from '@codemirror/view'
 import { tags as t } from '@lezer/highlight'
 import type { Mode } from '../types'
 import { languages, loadLanguage } from './languages'
@@ -63,6 +63,53 @@ const chrome = EditorView.theme({
 const modeC = new Compartment()
 const langC = new Compartment()
 const readOnlyC = new Compartment()
+const gutterC = new Compartment()
+
+/** Line numbers in Markdown and text files (a setting); code files always have them. */
+let proseNumbers = false
+
+class HeadingGutterClass extends GutterMarker {
+  constructor(readonly elementClass: string) {
+    super()
+  }
+}
+const headingClasses = [1, 2, 3, 4, 5, 6].map((n) => new HeadingGutterClass(`gl-h${n}`))
+
+function headingMarks(state: EditorState): RangeSet<GutterMarker> {
+  const marks = []
+  for (let n = syntaxTree(state).topNode.firstChild; n; n = n.nextSibling) {
+    const m = /^(?:ATX|Setext)Heading(\d)$/.exec(n.name)
+    if (m) marks.push(headingClasses[Number(m[1]) - 1].range(state.doc.lineAt(n.from).from))
+  }
+  return RangeSet.of(marks)
+}
+
+/** Tags gutter rows of heading lines so their numbers line up with the bigger heading text.
+ *  Walks only top-level blocks, and only when the document or its parse tree changed. */
+const headingGutter = StateField.define<RangeSet<GutterMarker>>({
+  create: headingMarks,
+  update: (marks, tr) => (tr.docChanged || syntaxTree(tr.state) !== syntaxTree(tr.startState) ? headingMarks(tr.state) : marks),
+  provide: (f) => gutterLineClass.from(f),
+})
+
+function gutterExtensions(mode: Mode): Extension {
+  if (mode === 'code') return [lineNumbers(), highlightActiveLineGutter()]
+  if (!proseNumbers) return []
+  return [
+    lineNumbers(),
+    highlightActiveLineGutter(),
+    mode === 'markdown' ? headingGutter : [],
+    EditorView.editorAttributes.of({ class: 'numbered' }),
+  ]
+}
+
+/** Turn line numbers for Markdown / text files on or off (code files always have them).
+ *  Without a view it only sets the value the next document picks up. */
+export function setLineNumbers(on: boolean, view?: EditorView, mode?: Mode): void {
+  if (on === proseNumbers) return
+  proseNumbers = on
+  if (view && mode) view.dispatch({ effects: gutterC.reconfigure(gutterExtensions(mode)) })
+}
 
 export interface EditorHooks {
   onUpdate: (u: ViewUpdate) => void
@@ -87,8 +134,6 @@ function modeExtensions(mode: Mode, live: boolean): Extension {
     return [EditorView.lineWrapping, EditorView.editorAttributes.of({ class: 'mode-prose mode-text' })]
   }
   return [
-    lineNumbers(),
-    highlightActiveLineGutter(),
     highlightActiveLine(),
     bracketMatching(),
     closeBrackets(),
@@ -127,6 +172,7 @@ export function showDocument(view: EditorView, o: DocOptions): void {
         syntaxHighlighting(highlight),
         chrome,
         modeC.of(modeExtensions(o.mode, o.live)),
+        gutterC.of(gutterExtensions(o.mode)),
         langC.of([]),
         readOnlyC.of(EditorState.readOnly.of(o.readonly)),
         EditorView.updateListener.of((u) => hooks.onUpdate(u)),

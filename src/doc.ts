@@ -6,7 +6,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { open as openDialog, save as saveDialog } from '@tauri-apps/plugin-dialog'
 import { imageCtx } from './editor/images'
 import { modeFor } from './editor/languages'
-import { setLive, showDocument } from './editor/setup'
+import { setLineNumbers, setLive, showDocument } from './editor/setup'
 import { applyFonts } from './fonts'
 import { app, emit } from './state'
 import type { Config, OpenedFile } from './types'
@@ -29,6 +29,7 @@ export function showFile(f: OpenedFile | null): void {
   }
   imageCtx.dir = app.doc.dir
   imageCtx.remote = app.config.app.remote_images
+  setLineNumbers(app.config.app.line_numbers)
   showDocument(app.view, {
     content,
     name: app.doc.name,
@@ -207,6 +208,7 @@ export function updateConfig(change: (c: Config) => void): void {
     imageCtx.remote = app.config.app.remote_images
     refreshLive()
   }
+  setLineNumbers(app.config.app.line_numbers, app.view, app.doc.mode)
   emit('config')
   clearTimeout(configTimer)
   configTimer = window.setTimeout(() => {

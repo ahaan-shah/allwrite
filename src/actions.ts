@@ -266,6 +266,13 @@ export function registerActions(): void {
         toast(`Autosave ${app.config.app.autosave ? 'on' : 'off'}`)
       },
     },
+    {
+      id: 'line-numbers', label: 'Toggle line numbers', keys: 'Ctrl+Alt+L',
+      run: () => {
+        updateConfig((c) => (c.app.line_numbers = !c.app.line_numbers))
+        toast(app.doc.mode === 'code' ? 'Code files always show line numbers' : `Line numbers ${app.config.app.line_numbers ? 'on' : 'off'}`)
+      },
+    },
     { id: 'quit', label: 'Quit', keys: 'Ctrl+Q', run: async () => { if (await guard()) await getCurrentWindow().destroy() } },
   )
 }

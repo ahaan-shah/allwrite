@@ -17,7 +17,7 @@ The user works on this machine while sessions run. **Never open the app on their
 
 - `scripts/run-ws9.sh [VAR=value ...] [-- file]` starts the release build on workspace 9 without switching to it (`hl.exec_cmd(cmd, { workspace = "9 silent" })`). Hyprland here uses the Lua API (`hyprctl eval`); the old `hyprctl dispatch exec "[rules] cmd"` syntax fails.
 - Dev hooks in the real app (cost nothing when unset): `ALLWRITE_SNAPSHOT=/path/out.png` writes a PNG of the page after `ALLWRITE_SNAPSHOT_DELAY` ms (default 3000); `ALLWRITE_EVAL='<js>'` runs JS in the page halfway through that delay. `window.allwrite` is the app state (`allwrite.view` is the CodeMirror view); synthetic `keydown` events on `window` trigger commands.
-- `scripts/preview-headless.sh out.png 'file=test.md&cursor=420&keys=Ctrl+P&type=font' 900x760` renders the built frontend in headless Chromium with a mocked backend (`tests/harness/mock.js`), no window at all. Needs `npm run build`. Hash options: `file` (test.md or a file in tests/harness/), `cursor`, `scroll`, `keys` (combos separated by `;`), `type`, `after` (combos pressed after `type`), `hover` (top-bar command id; shows its tooltip). Chromium is not WebKit: it did not catch the lazy-image bug below.
+- `scripts/preview-headless.sh out.png 'file=test.md&cursor=420&keys=Ctrl+P&type=font' 900x760` renders the built frontend in headless Chromium with a mocked backend (`tests/harness/mock.js`), no window at all. Needs `npm run build`. Hash options: `file` (test.md or a file in tests/harness/), `cursor`, `scroll`, `keys` (combos separated by `;`), `type`, `after` (combos pressed after `type`), `hover` (top-bar command id; shows its tooltip), `numbers=1` (line numbers on). Chromium is not WebKit: it did not catch the lazy-image bug below.
 - Always `pkill -x allwrite` when done and check `hyprctl activeworkspace` is still the user's.
 
 ## Commands
@@ -74,6 +74,7 @@ packaging/           .desktop + PKGBUILD
 - Portal fallback uses gio D-Bus from the `gtk` crate (already linked) instead of `zbus`, and is only set up when pywal's `colors.json` is absent.
 - Fonts come from `fc-list` rather than linking fontconfig.
 - Top bar: undo/redo buttons left of the filename; one heading button (opens a picker); Save As, Replace and zoom are keys + palette only. Tooltips are our own `#tooltip` element (from `data-tip`), not native `title`, so they follow the theme.
+- Line numbers: setting `[app] line_numbers` (Settings, `Ctrl+Alt+L`) for Markdown / text, beside the centered column; code files always have them. Heading rows get `gl-hN` gutter classes so numbers line up with big headings. `#editor` has `isolation: isolate` because CodeMirror's gutter z-index would cover overlays.
 - No "Start writing…" placeholder in empty documents (removed at the user's request).
 - No hanging indent for wrapped list items yet. Tables render as an HTML table widget (`editor/tables.ts`, a StateField because block widgets cannot come from a ViewPlugin) and show raw when the cursor is inside.
 - Headings default to the text color (theme slot `heading = "foreground"`), drawn a step brighter as `--strong`; set `[theme] heading = "color6"` for the old teal.

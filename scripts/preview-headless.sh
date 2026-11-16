@@ -25,7 +25,7 @@ for name in os.listdir(os.path.join(here, 'tests', 'harness')) + ['test.md']:
     p = os.path.join(here, name) if name == 'test.md' else os.path.join(here, 'tests', 'harness', name)
     if os.path.isfile(p) and not name.endswith('.js'):
         files[name] = open(p).read()
-config = dict(font=dict(text='Inter', code='JetBrains Mono', size=16, line_height=1.6, column_width=72), app=dict(autosave=False, remote_images=True), keys={}, theme={})
+config = dict(font=dict(text='Inter', code='JetBrains Mono', size=16, line_height=1.6, column_width=72), app=dict(autosave=False, remote_images=True, line_numbers=False), keys={}, theme={})
 mock = open(os.path.join(here, 'tests', 'harness', 'mock.js')).read()
 html = open(os.path.join(tmp, 'index.html')).read()
 inject = '<script>window.__MOCK__=' + json.dumps(dict(theme=theme, files=files, config=config)).replace('</', '<\\/') + ';</script><script>' + mock + '</script>'

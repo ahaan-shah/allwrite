@@ -1,10 +1,11 @@
 // Stand-in for the Tauri backend so the built frontend can run in a plain (headless) browser.
 // Used by scripts/preview-headless.sh. Options come from the URL hash, e.g.
 //   #file=test.md&cursor=40&keys=Ctrl+P;Ctrl+B&type=font
-// `after` = combos pressed after `type`; `hover` = a top-bar command id to hover (shows its tooltip).
+// `numbers=1` turns on line numbers; `after` = combos pressed after `type`; `hover` = a top-bar command id to hover (shows its tooltip).
 ;(() => {
   const opts = Object.fromEntries(new URLSearchParams(location.hash.slice(1)))
   const data = window.__MOCK__
+  if (opts.numbers) data.config.app.line_numbers = true
   const calls = (window.__CALLS__ = [])
   let cb = 0
   const handlers = {

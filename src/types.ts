@@ -8,7 +8,7 @@ export interface FontCfg {
 
 export interface Config {
   font: FontCfg
-  app: { autosave: boolean; remote_images: boolean }
+  app: { autosave: boolean; remote_images: boolean; line_numbers: boolean }
   keys: Record<string, string>
   theme: Record<string, string>
 }
