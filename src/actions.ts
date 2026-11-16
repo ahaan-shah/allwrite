@@ -1,5 +1,6 @@
 // Every user action, registered once. See commands.ts.
 
+import { redo, undo } from '@codemirror/commands'
 import { gotoLine, openSearchPanel } from '@codemirror/search'
 import { EditorView } from '@codemirror/view'
 import { invoke } from '@tauri-apps/api/core'
@@ -201,6 +202,9 @@ export function registerActions(): void {
     { id: 'save', label: 'Save', keys: 'Ctrl+S', icon: 'save', run: save },
     { id: 'save-as', label: 'Save as…', keys: 'Ctrl+Shift+S', run: saveAs },
     { id: 'reload', label: 'Reload from disk', run: async () => { if (await guard()) await reloadFromDisk() } },
+
+    { id: 'undo', label: 'Undo', keys: 'Ctrl+Z', icon: 'undo', run: () => undo(v()) },
+    { id: 'redo', label: 'Redo', keys: 'Ctrl+Shift+Z', icon: 'redo', run: () => redo(v()) },
 
     { id: 'bold', label: 'Bold', keys: 'Ctrl+B', icon: 'bold', run: md(() => toggleInline(v(), '**')) },
     { id: 'italic', label: 'Italic', keys: 'Ctrl+I', icon: 'italic', run: md(() => toggleInline(v(), '*')) },

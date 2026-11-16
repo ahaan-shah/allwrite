@@ -1,6 +1,7 @@
 // Stand-in for the Tauri backend so the built frontend can run in a plain (headless) browser.
 // Used by scripts/preview-headless.sh. Options come from the URL hash, e.g.
 //   #file=test.md&cursor=40&keys=Ctrl+P;Ctrl+B&type=font
+// `after` = combos pressed after `type`; `hover` = a top-bar command id to hover (shows its tooltip).
 ;(() => {
   const opts = Object.fromEntries(new URLSearchParams(location.hash.slice(1)))
   const data = window.__MOCK__
@@ -57,7 +58,12 @@
           } else if (view) {
             view.dispatch(view.state.replaceSelection(opts.type))
           }
+          for (const combo of (opts.after || '').split(';').filter(Boolean)) key(combo.replace(/ /g, '+'))
         }, 150)
+      }
+      if (opts.hover) {
+        const b = document.querySelector(`#topbar [data-cmd="${opts.hover}"]`)
+        if (b) b.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
       }
       if (opts.width) document.documentElement.style.width = opts.width
     }, 400)

@@ -2,6 +2,7 @@
 # Render the built frontend in headless Chromium with a mocked backend and save a screenshot.
 # Nothing appears on screen. Needs `npm run build` first.
 # Usage: scripts/preview-headless.sh <out.png> ['file=test.md&cursor=40&keys=Ctrl+P'] [WxH]
+# Hash options also include after=<combos pressed after type> and hover=<top-bar command id>.
 set -e
 here=$(cd "$(dirname "$0")/.." && pwd)
 out=${1:?output png}; hash=${2:-file=test.md}; size=${3:-900x760}

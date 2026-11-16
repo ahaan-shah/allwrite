@@ -46,11 +46,11 @@ button, input { font: inherit; color: inherit; }
 
 #topbar {
   flex: none;
-  height: 36px;
+  height: 44px;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 6px 0 12px;
+  padding: 0 8px;
   user-select: none;
   -webkit-user-select: none;
   transition: opacity 120ms;
@@ -64,16 +64,17 @@ button, input { font: inherit; color: inherit; }
 
 #topbar .buttons { display: flex; align-items: center; flex: none; }
 #topbar .group { display: flex; align-items: center; }
-#topbar .group + .group { margin-left: 5px; padding-left: 5px; border-left: 1px solid var(--border); height: 16px; }
+#topbar .group + .group { margin-left: 6px; padding-left: 6px; border-left: 1px solid var(--border); height: 20px; }
+#topbar .buttons.left { margin-right: 4px; }
 
 .icon-btn {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 26px;
+  width: 32px;
+  height: 32px;
   padding: 0;
   border: 0;
-  border-radius: 6px;
+  border-radius: 7px;
   background: none;
   color: var(--muted);
   cursor: pointer;
@@ -94,6 +95,23 @@ body:not([data-mode="markdown"]) #topbar [data-cmd="outline"] { display: none; }
 
 body.typing #topbar, body.typing #statusbar { opacity: 0.25; }
 body.focus-mode #topbar, body.focus-mode #statusbar { display: none; }
+
+#tooltip {
+  position: fixed;
+  z-index: 40;
+  padding: 4px 9px;
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  box-shadow: 0 6px 20px var(--shadow);
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: tip-in 120ms ease-out;
+}
+#tooltip[hidden] { display: none; }
+@keyframes tip-in { from { opacity: 0; transform: translateY(-3px); } }
 
 /* ---- status bar ---- */
 

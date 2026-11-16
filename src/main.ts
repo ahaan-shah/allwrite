@@ -62,6 +62,8 @@ async function main(): Promise<void> {
         }
         return
       }
+      // Undo/redo inside a plain text field (e.g. the find box) is the field's own.
+      if ((id === 'undo' || id === 'redo') && (e.target as HTMLElement).closest?.('input, textarea')) return
       e.preventDefault()
       e.stopPropagation()
       run(id)

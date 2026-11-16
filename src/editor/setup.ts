@@ -6,7 +6,7 @@ import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { HighlightStyle, bracketMatching, indentOnInput, syntaxHighlighting } from '@codemirror/language'
 import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search'
 import { Compartment, EditorState, type Extension } from '@codemirror/state'
-import { EditorView, drawSelection, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers, placeholder, type ViewUpdate } from '@codemirror/view'
+import { EditorView, drawSelection, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers, type ViewUpdate } from '@codemirror/view'
 import { tags as t } from '@lezer/highlight'
 import type { Mode } from '../types'
 import { languages, loadLanguage } from './languages'
@@ -56,7 +56,6 @@ const chrome = EditorView.theme({
   '.cm-panels.cm-panels-top': { borderBottom: '1px solid var(--border)' },
   '.cm-panels.cm-panels-bottom': { borderTop: '1px solid var(--border)' },
   '.cm-matchingBracket, .cm-nonmatchingBracket': { backgroundColor: 'var(--hover)', outline: 'none' },
-  '.cm-placeholder': { color: 'var(--muted)', fontStyle: 'italic' },
   '.cm-tooltip': { backgroundColor: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--fg)' },
   '.cm-gotoLine': { fontFamily: 'var(--font-text)' },
 })
@@ -82,11 +81,10 @@ function modeExtensions(mode: Mode, live: boolean): Extension {
       EditorView.lineWrapping,
       EditorView.editorAttributes.of({ class: live ? 'mode-prose mode-live' : 'mode-prose mode-source' }),
       live ? [livePreview(hooks.openUrl), tables] : [],
-      placeholder('Start writing…'),
     ]
   }
   if (mode === 'text') {
-    return [EditorView.lineWrapping, EditorView.editorAttributes.of({ class: 'mode-prose mode-text' }), placeholder('Start writing…')]
+    return [EditorView.lineWrapping, EditorView.editorAttributes.of({ class: 'mode-prose mode-text' })]
   }
   return [
     lineNumbers(),
